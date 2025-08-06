@@ -5,7 +5,7 @@ import cors from 'cors';
 import userRoutes from './routes/user.route.js';
 dotenv.config();
 import authRoutes from './routes/auth.route.js';
-
+import cookieParser from 'cookie-parser';
 
 mongoose.connect(process.env.MONGO).then(() => {
     console.log('Connected to MongoDB successfully!');
@@ -14,6 +14,8 @@ mongoose.connect(process.env.MONGO).then(() => {
 });
 
 const app = express();
+
+app.use(cookieParser());
 
 app.use(cors());
 app.use(express.json());
@@ -32,11 +34,12 @@ app.get('/', (req, res) => {
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
 
+
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode || 500;
     const message = err.message || 'Internal Server Error';
     return res.status(statusCode).json({
-        sucess: 'false',
+        success: false,
         statusCode,
         message
     });

@@ -1,11 +1,14 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { signInStart, signInSuccess, signInFailure } from '../redux/user/userSlice';
+import OAuth from '../components/OAuth';
 
 export default function SignIn() {
   const [formData, setFormData] = useState({});
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const {loading, error } = useSelector((state) => state.user);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const handleChange = (e) => {
     setFormData({
@@ -15,9 +18,10 @@ export default function SignIn() {
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    
     try {
-      const response = await fetch('http://localhost:3000/api/auth/signin', {
+      dispatch(signInStart());
+      const response = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -26,21 +30,20 @@ export default function SignIn() {
       });
       const data = await response.json();
       if (data.success === false) {
-        setError(data.message);
-        setLoading(false);
+        dispatch(signInFailure(data.message));
         return;
       }
-      setLoading(false);
-      setError(null);
-      navigate('/sign-up');
-      console.log('Form submitted:', formData);
-      if (response.ok) {
-        console.log('User created successfully:', data);
-      } else {
-        console.error('Error creating user:', data);
-      }
+      dispatch(signInSuccess(data));
+      navigate('/'); // Redirect to homepage after successful sign in
+      console.log(data);
+      if (data.sucess == false ) {
+        dispatch(signInFailure(data.message));
+        return;
+      } 
+      dispatch(signInSuccess(data));
+      navigate('/'); // Redirect to homepage after successful sign in
     } catch (error) {
-      console.error('Network error:', error);
+      dispatch(signInFailure(error.message));
     }
      
   }
@@ -55,6 +58,7 @@ export default function SignIn() {
           {loading ? 'loading...' : 'Sign in'}
 
         </button>
+        <OAuth />
       </form>
       <div className=" flex gap-2 mt-5">
         <p>Don't have an account?</p>
