@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import { useRef } from 'react'
 import axios from 'axios';
+import { updateUserStart, updateUserSuccess, updateUserFailure } from '../redux/user/userSlice';
 
 export default function Profile() {
   const fileRef = useRef(null);
+  const dispatch = useDispatch();
   const {currentUser} = useSelector((state) => state.user)
   const [file, setFile] = useState(undefined);
   const [avatarUrl, setAvatarUrl] = useState(currentUser.avatar || '');
   const [imageUploadSuccess, setImageUploadSuccess] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState(false);
 
   useEffect(() => {
     if (file) {
@@ -32,10 +35,24 @@ export default function Profile() {
     try {
       const url = await uploadToCloudinary(file);
       setAvatarUrl(url);
+      // Send to backend
+      dispatch(updateUserStart());
+      const res = await axios.post(`/api/user/update/${currentUser._id}`, {
+        avatar: url
+      });
+      if (res.data && res.data.success === false) {
+        setImageUploadError(true);
+        setTimeout(() => setImageUploadError(false), 3000);
+        dispatch(updateUserFailure(res.data.message));
+        return;
+      }
+      dispatch(updateUserSuccess({ ...currentUser, avatar: url }));
       setImageUploadSuccess(true);
       setTimeout(() => setImageUploadSuccess(false), 3000);
     } catch (err) {
-      alert('Image upload failed');
+      setImageUploadError(true);
+      setTimeout(() => setImageUploadError(false), 3000);
+      dispatch(updateUserFailure('Image upload failed'));
     }
   };
 
@@ -55,6 +72,9 @@ export default function Profile() {
         />
         {imageUploadSuccess && (
           <p className='text-green-600 text-center'>Image uploaded successfully!</p>
+        )}
+        {imageUploadError && (
+          <p className='text-red-600 text-center'>Failed to update image!</p>
         )}
         <input type="text" placeholder='username' className='border bg-white p-3 rounded-lg' id='username'/>
         <input type="text" placeholder='email' className='border p-3  bg-white rounded-lg' id='email'/>

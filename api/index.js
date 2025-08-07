@@ -7,6 +7,7 @@ dotenv.config();
 import authRoutes from './routes/auth.route.js';
 import cookieParser from 'cookie-parser';
 
+
 mongoose.connect(process.env.MONGO).then(() => {
     console.log('Connected to MongoDB successfully!');
 }).catch((err) => {
