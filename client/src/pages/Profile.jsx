@@ -2,16 +2,18 @@ import React, { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useRef } from 'react'
 import axios from 'axios';
-import { updateUserStart, updateUserSuccess, updateUserFailure } from '../redux/user/userSlice';
+import { updateUserStart, updateUserSuccess, updateUserFailure, deleteUserFailure, deleteUserSuccess, deleteUserStart } from '../redux/user/userSlice';
 
 export default function Profile() {
   const fileRef = useRef(null);
   const dispatch = useDispatch();
-  const {currentUser} = useSelector((state) => state.user)
+  const {currentUser, loading, error} = useSelector((state) => state.user)
   const [file, setFile] = useState(undefined);
   const [avatarUrl, setAvatarUrl] = useState(currentUser.avatar || '');
   const [imageUploadSuccess, setImageUploadSuccess] = useState(false);
   const [imageUploadError, setImageUploadError] = useState(false);
+  const [formData, setFormData] = useState({});
+  const [updateSuccess, setUpdateSuccess] = useState(false);
 
   useEffect(() => {
     if (file) {
@@ -54,12 +56,56 @@ export default function Profile() {
       setTimeout(() => setImageUploadError(false), 3000);
       dispatch(updateUserFailure('Image upload failed'));
     }
+  }
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      dispatch(updateUserStart());
+      const res = await fetch(`/api/user/update/${currentUser._id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (data.success === false) {
+        dispatch(updateUserFailure(data.message));
+        return;
+      }
+      dispatch(updateUserSuccess(data));
+      setUpdateSuccess(true);
+      setTimeout(() => setUpdateSuccess(false), 3000);
+    } catch (error) {
+      dispatch(updateUserFailure(error.message));
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    try {
+      dispatch(deleteUserStart());
+      const res = await fetch(`/api/user/delete/${currentUser._id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success === false) {
+        dispatch(deleteUserFailure(data.message));
+        return;
+      }
+      dispatch(deleteUserSuccess(data));
+    } catch (error) {
+      dispatch(deleteUserFailure(error.message));
+    }
   };
 
   return (
     <div className='p-5 max-w-lg mx-auto'>
       <h1 className='text-3xl font-semibold text-center mb-7'>Profile</h1>
-      <form className='flex flex-col gap-4'>
+      <form onSubmit={handleSubmit} className='flex flex-col gap-4'>
         <input onChange={e => setFile(e.target.files[0])} type="file" ref={fileRef} hidden />
         <img
           onClick={e => {
@@ -76,15 +122,17 @@ export default function Profile() {
         {imageUploadError && (
           <p className='text-red-600 text-center'>Failed to update image!</p>
         )}
-        <input type="text" placeholder='username' className='border bg-white p-3 rounded-lg' id='username'/>
-        <input type="text" placeholder='email' className='border p-3  bg-white rounded-lg' id='email'/>
-        <input type="text" placeholder='password' className='border p-3  bg-white rounded-lg' id='password'/>
-        <button className='bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-80 '>Update</button>
+        <input type="text"  onChange={handleChange} defaultValue={currentUser.username} placeholder='username' className='border bg-white p-3 rounded-lg' id='username'/>
+        <input type="text"  onChange={handleChange} defaultValue={currentUser.email} placeholder='email' className='border p-3  bg-white rounded-lg' id='email'/>
+        <input type="password"  onChange={handleChange}  placeholder='password' className='border p-3  bg-white rounded-lg' id='password'/>
+        <button disabled={loading} className='bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-80 '>{loading ? 'Updating...' : 'Update'}</button>
       </form>
       <div className=' flex justify-between mt-5'>
-        <span className=' text-red-700 cursor-pointer'>Delete Account</span>
+        <span className=' text-red-700 cursor-pointer' onClick={handleDeleteUser} >Delete Account</span>
         <span className=' text-red-700 cursor-pointer'>Sign out</span>
       </div>
+      <p>{error && <span className='text-red-700 '>{error}</span>}</p>
+      <p className='text-green-700 '>{updateSuccess && 'Profile updated successfully!'}</p>
     </div>
   );
 }
