@@ -2,7 +2,17 @@ import React, { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useRef } from 'react'
 import axios from 'axios';
-import { updateUserStart, updateUserSuccess, updateUserFailure, deleteUserFailure, deleteUserSuccess, deleteUserStart } from '../redux/user/userSlice';
+import { 
+  updateUserStart, 
+  updateUserSuccess, 
+  updateUserFailure, 
+  deleteUserFailure, 
+  deleteUserSuccess, 
+  deleteUserStart,
+  signOutUserStart,
+  signOutUserSuccess,
+  signOutUserFailure 
+} from '../redux/user/userSlice';
 
 export default function Profile() {
   const fileRef = useRef(null);
@@ -102,6 +112,21 @@ export default function Profile() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      dispatch(signOutUserStart());
+      const res = await fetch('/api/auth/signout');
+      const data = await res.json();
+      if (data.success === false) {
+        dispatch(signOutUserFailure(data.message));
+        return;
+      }
+      dispatch(signOutUserSuccess(data));
+    } catch (error) {
+      dispatch(signOutUserFailure(error.message));
+    }
+  };
+
   return (
     <div className='p-5 max-w-lg mx-auto'>
       <h1 className='text-3xl font-semibold text-center mb-7'>Profile</h1>
@@ -128,8 +153,8 @@ export default function Profile() {
         <button disabled={loading} className='bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-80 '>{loading ? 'Updating...' : 'Update'}</button>
       </form>
       <div className=' flex justify-between mt-5'>
-        <span className=' text-red-700 cursor-pointer' onClick={handleDeleteUser} >Delete Account</span>
-        <span className=' text-red-700 cursor-pointer'>Sign out</span>
+        <span className='text-red-700 cursor-pointer' onClick={handleDeleteUser}>Delete Account</span>
+        <span className='text-red-700 cursor-pointer' onClick={handleSignOut}>Sign out</span>
       </div>
       <p>{error && <span className='text-red-700 '>{error}</span>}</p>
       <p className='text-green-700 '>{updateSuccess && 'Profile updated successfully!'}</p>
